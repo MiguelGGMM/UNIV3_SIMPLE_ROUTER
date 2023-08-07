@@ -3,9 +3,6 @@ module.exports = {
   providerOptions: {
     port: 8545,
     hostname: "127.0.0.1",
-  },  
-  skipFiles: [
-    "Libraries",
-    "UniswapV3"
-  ]  
+  },
+  skipFiles: ["Libraries", "UniswapV3"],
 };

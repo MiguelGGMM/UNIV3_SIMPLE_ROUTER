@@ -50,7 +50,7 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
     uint160 internal constant MIN_SQRT_RATIO = 4295128739; // ((1.0001^-887220)^(1/2))*2^96
     /// @dev The maximum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MAX_TICK)
     uint160 internal constant MAX_SQRT_RATIO = 1461446703485210103287273052203988822378723970342;
-    
+
     // Decimals price precision
     uint8 internal constant decimalsPrecision = 18;
 
@@ -61,7 +61,7 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
     uint24 internal constant liqPairFee100 = 10000;
 
     // Pair fees dynamic
-    uint24 [] internal liqPairFeeX;
+    uint24[] internal liqPairFeeX;
 
     bool private reentrantCallback;
     modifier nonReentrantCallback() {
@@ -72,62 +72,96 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
     }
 
     /*solhint-disable-next-line no-empty-blocks */
-    constructor(address _weth, bool _debugMode) { 
+    constructor(address _weth, bool _debugMode) {
         weth = _weth;
         debugMode = _debugMode;
     }
 
     // region VIEWS
 
-    function improveLiqPair(address factory, address token0, address token1, bool pairZero, uint24 liqPairFee, address lastLiqPair, uint256 lastLiqBal) external view returns(address, uint256) {
+    function improveLiqPair(
+        address factory,
+        address token0,
+        address token1,
+        bool pairZero,
+        uint24 liqPairFee,
+        address lastLiqPair,
+        uint256 lastLiqBal
+    ) external view returns (address, uint256) {
         IUniswapV3Factory _factory = IUniswapV3Factory(factory);
         address liqPair = _factory.getPool(token0, token1, liqPairFee);
         uint256 liqBal = IERC20(pairZero ? token0 : token1).balanceOf(liqPair);
-        
-        if(liqBal > lastLiqBal) {
+
+        if (liqBal > lastLiqBal) {
             return (liqPair, liqBal);
         } else {
             return (lastLiqPair, lastLiqBal);
         }
     }
 
-    function searchLiqPairBase(address factory, address token0, address token1, bool pairZero) external view returns(address, uint256) {        
-        (address liqPair, uint256 liqBal) = this.improveLiqPair(factory, token0, token1, pairZero, liqPairFee001, address(0), 0);
+    function searchLiqPairBase(
+        address factory,
+        address token0,
+        address token1,
+        bool pairZero
+    ) external view returns (address, uint256) {
+        (address liqPair, uint256 liqBal) = this.improveLiqPair(
+            factory,
+            token0,
+            token1,
+            pairZero,
+            liqPairFee001,
+            address(0),
+            0
+        );
         (liqPair, liqBal) = this.improveLiqPair(factory, token0, token1, pairZero, liqPairFee005, liqPair, liqBal);
         (liqPair, liqBal) = this.improveLiqPair(factory, token0, token1, pairZero, liqPairFee030, liqPair, liqBal);
         (liqPair, liqBal) = this.improveLiqPair(factory, token0, token1, pairZero, liqPairFee100, liqPair, liqBal);
 
         // Check for other pools
-        if(liqPairFeeX.length > 0) {
-            for(uint24 _i = 0; _i < liqPairFeeX.length; _i++) {
-                (liqPair, liqBal) = this.improveLiqPair(factory, token0, token1, pairZero, liqPairFeeX[_i], liqPair, liqBal);
+        if (liqPairFeeX.length > 0) {
+            for (uint24 _i = 0; _i < liqPairFeeX.length; _i++) {
+                (liqPair, liqBal) = this.improveLiqPair(
+                    factory,
+                    token0,
+                    token1,
+                    pairZero,
+                    liqPairFeeX[_i],
+                    liqPair,
+                    liqBal
+                );
             }
         }
 
         return (liqPair, liqBal);
     }
 
-    function searchLiqPair(address factory, address token, address pair) external view returns(address) {
+    function searchLiqPair(address factory, address token, address pair) external view returns (address) {
         (address liqPair, uint256 liqBal) = this.searchLiqPairBase(factory, token, pair, false);
         (address liqPair2, uint256 liqBal2) = this.searchLiqPairBase(factory, pair, token, true);
         return liqBal > liqBal2 ? liqPair : liqPair2;
     }
 
-    function calcAmountReceived(address factory, address token, address pair, uint256 amountIn) external view returns(uint256) {
+    function calcAmountReceived(
+        address factory,
+        address token,
+        address pair,
+        uint256 amountIn
+    ) external view returns (uint256) {
         // SEARCH LIQ PAIR
         address liqPair = this.searchLiqPair(factory, token, pair);
         require(liqPair != address(0), "V3 liq pair not found on factory");
 
         // V3 LIQ CONTRACT
-        (, int24 tick,,,,,) = IUniswapV3Pool(liqPair).slot0();
+        (, int24 tick, , , , , ) = IUniswapV3Pool(liqPair).slot0();
         uint160 sqrtRatioAtTick = TickMath.getSqrtRatioAtTick(tick);
         uint256 ratioAtTick = uint256(sqrtRatioAtTick).mul(uint256(sqrtRatioAtTick));
         bool _zeroForOne = weth == IUniswapV3Pool(liqPair).token0();
 
-        if(!_zeroForOne) {
-            return amountIn.mul(10**decimalsPrecision).div(ratioAtTick.mul(10**decimalsPrecision).div(2**192));
+        if (!_zeroForOne) {
+            return amountIn.mul(10 ** decimalsPrecision).div(ratioAtTick.mul(10 ** decimalsPrecision).div(2 ** 192));
         } else {
-            return amountIn.mul(ratioAtTick.mul(10**decimalsPrecision).div(2**192)).div(10**decimalsPrecision);
+            return amountIn.mul(ratioAtTick.mul(10 ** decimalsPrecision).div(2 ** 192)).div(10 ** decimalsPrecision);
         }
     }
 
@@ -135,11 +169,17 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
 
     // region INTERNALS
 
-    function setBasicVariables(address factory, address tokenBuy, address pair, uint256 amountPair, uint256 minTokensReceived) internal {
+    function setBasicVariables(
+        address factory,
+        address tokenBuy,
+        address pair,
+        uint256 amountPair,
+        uint256 minTokensReceived
+    ) internal {
         recipient = msg.sender;
         currentToken = tokenBuy;
         currentPair = pair;
-        currentMinTokens = minTokensReceived;        
+        currentMinTokens = minTokensReceived;
 
         // Current amount of tokens
         currentLastTokens = IERC20(currentToken).balanceOf(recipient);
@@ -158,48 +198,73 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
     }
 
     function performSwap() internal {
-        currentLiqPool.swap(recipient, zeroForOne, int256(currentTokensPair), zeroForOne ? MIN_SQRT_RATIO + 1 : MAX_SQRT_RATIO - 1, abi.encode(0)/*abi.encode(path, payer)*/);
+        currentLiqPool.swap(
+            recipient,
+            zeroForOne,
+            int256(currentTokensPair),
+            zeroForOne ? MIN_SQRT_RATIO + 1 : MAX_SQRT_RATIO - 1,
+            abi.encode(0) /*abi.encode(path, payer)*/
+        );
     }
 
     // endregion
 
-    function performBuyTokenETH(address factory, address tokenBuy, uint256 minTokensReceived) external payable nonReentrant {
+    function performBuyTokenETH(
+        address factory,
+        address tokenBuy,
+        uint256 minTokensReceived
+    ) external payable nonReentrant {
         setBasicVariables(factory, tokenBuy, weth, msg.value, minTokensReceived);
 
         // WRAP ETH
         IWETH wethI = IWETH(zeroForOne ? currentLiqPool.token0() : currentLiqPool.token1());
-        wethI.deposit{value: currentTokensPair}();        
+        wethI.deposit{value: currentTokensPair}();
 
         // SWAP
-        performSwap();    
+        performSwap();
     }
 
-    function performBuyToken(address factory, address tokenBuy, address pair, uint256 amountPair, uint256 minTokensReceived) external nonReentrant {
-        setBasicVariables(factory, tokenBuy, pair, amountPair, minTokensReceived);   
+    function performBuyToken(
+        address factory,
+        address tokenBuy,
+        address pair,
+        uint256 amountPair,
+        uint256 minTokensReceived
+    ) external nonReentrant {
+        setBasicVariables(factory, tokenBuy, pair, amountPair, minTokensReceived);
 
         // SWAP
-        performSwap();  
+        performSwap();
     }
 
     function uniswapV3SwapCallback(int256, int256, bytes calldata) external nonReentrantCallback {
         require(msg.sender == currentLiqPair, "Only liq pairs allowed");
 
         // Check amount of tokens received if slip
-        require(IERC20(currentToken).balanceOf(recipient).sub(currentLastTokens) >= currentMinTokens, "Slippage error");        
+        require(IERC20(currentToken).balanceOf(recipient).sub(currentLastTokens) >= currentMinTokens, "Slippage error");
 
-        if(debugMode) {
-            console.log("Token holdings before tx: %s, tokens that will be send for payment %s", currentLastTokens, currentTokensPair);
-            console.log("Tokens received: %s, min tokens: %s, liq pool: %s", IERC20(currentToken).balanceOf(recipient).sub(currentLastTokens), currentMinTokens, msg.sender);
+        if (debugMode) {
+            console.log(
+                "Token holdings before tx: %s, tokens that will be send for payment %s",
+                currentLastTokens,
+                currentTokensPair
+            );
+            console.log(
+                "Tokens received: %s, min tokens: %s, liq pool: %s",
+                IERC20(currentToken).balanceOf(recipient).sub(currentLastTokens),
+                currentMinTokens,
+                msg.sender
+            );
         }
 
         // Send payment
-        if(isEthOp) {
+        if (isEthOp) {
             bool success = IERC20(currentPair).transfer(address(currentLiqPool), currentTokensPair);
-            if(debugMode) console.log("Transfer success? %s", success);
+            if (debugMode) console.log("Transfer success? %s", success);
             require(success, "Transfer error (payment) (ethOP)");
         } else {
             bool success = IERC20(currentPair).transferFrom(recipient, address(currentLiqPool), currentTokensPair);
-            if(debugMode) console.log("Transfer success? %s", success);
+            if (debugMode) console.log("Transfer success? %s", success);
             require(success, "Transfer error (payment) (notEthOP)");
         }
     }
@@ -211,13 +276,15 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
     }
 
     function clearStuckToken(address _tokenAddress, uint256 _tokens) public onlyOwner returns (bool) {
-        if(_tokens == 0){
-            _tokens = IERC20 (_tokenAddress).balanceOf(address(this));
+        if (_tokens == 0) {
+            _tokens = IERC20(_tokenAddress).balanceOf(address(this));
         }
-        return IERC20 (_tokenAddress).transfer(msg.sender, _tokens);
-    }    
+        return IERC20(_tokenAddress).transfer(msg.sender, _tokens);
+    }
 
-    function clearStuckBalance() external onlyOwner { payable(msg.sender).transfer(address(this).balance); }  
+    function clearStuckBalance() external onlyOwner {
+        payable(msg.sender).transfer(address(this).balance);
+    }
 
     //endregion
 }

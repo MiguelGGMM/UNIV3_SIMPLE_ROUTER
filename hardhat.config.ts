@@ -82,7 +82,7 @@ const config: HardhatUserConfig = {
     ],
   },
   mocha: {
-    timeout: 100000000
+    timeout: 100000000,
   },
   etherscan: {
     //https://hardhat.org/hardhat-runner/plugins/nomicfoundation-hardhat-verify

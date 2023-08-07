@@ -6,6 +6,6 @@ module.exports = {
   root: true,
   ignorePatterns: ["/coverage"],
   rules: {
-    "@typescript-eslint/no-unused-vars": "off"
-  }
+    "@typescript-eslint/no-unused-vars": "off",
+  },
 };

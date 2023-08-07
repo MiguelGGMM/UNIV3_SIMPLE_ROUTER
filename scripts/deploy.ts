@@ -11,12 +11,10 @@ async function main() {
 
   const simpleRouterV3 = await ethers.deployContract("SimpleRouterV3", [
     process.env.WETH,
-    false,//process.env.DEBUG_SOLIDITY == "1",
+    false, //process.env.DEBUG_SOLIDITY == "1",
   ]);
   await simpleRouterV3.waitForDeployment();
-  console.log(
-    `SimpleRouterV3 successfully deployed: ${simpleRouterV3.target}`,
-  );
+  console.log(`SimpleRouterV3 successfully deployed: ${simpleRouterV3.target}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

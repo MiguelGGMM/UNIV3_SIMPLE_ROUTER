@@ -10,10 +10,6 @@ import {IUniswapV3PoolActions} from "./IUniswapV3PoolActions.sol";
 /// to the ERC20 specification
 /// @dev The pool interface is broken up into many smaller pieces
 /*solhint-disable-next-line no-empty-blocks */
-interface IUniswapV3Pool is
-    IUniswapV3PoolImmutables,
-    IUniswapV3PoolState,
-    IUniswapV3PoolActions
-{
+interface IUniswapV3Pool is IUniswapV3PoolImmutables, IUniswapV3PoolState, IUniswapV3PoolActions {
 
 }

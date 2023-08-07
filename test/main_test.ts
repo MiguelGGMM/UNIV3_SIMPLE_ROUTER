@@ -3,12 +3,12 @@ import {
   SimpleRouterV3,
   SimpleRouterV3__factory,
   IWETH__factory,
+  IERC20__factory
 } from "../typechain-types";
 import { Addressable, BigNumberish /* TransactionReceipt */ } from "ethers";
 import { expect } from "chai";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { BN } from "bn.js";
-import { IERC20__factory } from "../typechain-types/factories/contracts/AuxContracts/PancakeRouter.sol";
 
 //const gasLimit = "5000000";
 //const gasPrice = "5000000000";

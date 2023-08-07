@@ -187,8 +187,56 @@ jobs:
       - name: Run hardhat tests (includes gas reported)
         run: pnpm run test
 
-  Codechecks-coverage:
-    name: Codechecks and coverage (coveralls)
+  Codechecks:
+    name: Codechecks (checks over gas report)
+    needs: [Test]
+    runs-on: ubuntu-22.04
+    steps:
+      ############### PNPM ###############
+      - uses: pnpm/action-setup@v2
+        name: Install pnpm
+        id: pnpm-install
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      ############### PNPM ###############
+
+      - name: Checkout repository code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 #only brings last commit
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run hardhat tests (includes gas reported)
+        run: pnpm run test
+
+      # codechecks, gas report diff
+      - name: Codechecks gas report
+        run: |
+          pnpm run codechecks
+        env:
+          CC_SECRET: ${{ secrets.CC_SECRET }}
+      # codechecks
+
+  Coverage:
+    name: Coverage (coveralls)
     needs: [Test]
     runs-on: ubuntu-22.04
     steps:
@@ -226,14 +274,6 @@ jobs:
 
       - name: Run hardhat coverage
         run: pnpm run coverage
-
-      # codechecks, gas report diff
-      - name: Codechecks gas report
-        run: |
-          pnpm run codechecks
-        env:
-          CC_SECRET: ${{ secrets.CC_SECRET }}
-      # codechecks
 
       # coveralls, code coverage
       - name: Coveralls GitHub Action

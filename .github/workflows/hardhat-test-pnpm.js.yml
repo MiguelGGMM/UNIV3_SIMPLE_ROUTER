@@ -11,8 +11,6 @@ on:
   pull_request:
     branches: [master]
 
-# 1. Lint & prettier -> compile -> test -> coverage & codechecks
-
 jobs:
   Lint-Prettify:
     name: Linter & Prettier

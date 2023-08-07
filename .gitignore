@@ -1,0 +1,10 @@
+node_modules
+.pk
+.cmc
+artifacts
+cache
+coverage
+typechain-types
+gasReporterOutput.json
+coverage.json
+_contracts2

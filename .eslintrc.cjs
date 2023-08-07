@@ -5,4 +5,7 @@ module.exports = {
   plugins: ["@typescript-eslint"],
   root: true,
   ignorePatterns: ["/coverage"],
+  rules: {
+    "@typescript-eslint/no-unused-vars": "off"
+  }
 };

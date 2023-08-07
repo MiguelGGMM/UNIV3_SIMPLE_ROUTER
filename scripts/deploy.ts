@@ -9,17 +9,13 @@ async function main() {
     ).map((_o) => `${_o}:${process.env[_o]}\n\t`)}`,
   );
 
-  const thePromisedMoon = await ethers.deployContract("ThePromisedMoon", [
-    process.env.NAME,
-    process.env.SYMBOL,
-    process.env.PAIR,
-    process.env.STABLE,
-    process.env.ROUTER,
-    process.env.DEBUG_SOLIDITY == "1",
+  const simpleRouterV3 = await ethers.deployContract("SimpleRouterV3", [
+    process.env.WETH,
+    false,//process.env.DEBUG_SOLIDITY == "1",
   ]);
-  await thePromisedMoon.waitForDeployment();
+  await simpleRouterV3.waitForDeployment();
   console.log(
-    `ThePromisedMoon successfully deployed: ${thePromisedMoon.target}`,
+    `SimpleRouterV3 successfully deployed: ${simpleRouterV3.target}`,
   );
 }
 

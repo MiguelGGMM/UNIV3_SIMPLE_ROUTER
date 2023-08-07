@@ -1,72 +1,78 @@
-import { ethers, network } from "hardhat";
-import {
-  /* IDEXRouter, */
-  TemplateToken,
-  TemplateToken__factory,
-  PancakeRouter,
+import { ethers, /* network */ } from "hardhat";
+import {  
+  SimpleRouterV3,
+  SimpleRouterV3__factory,
+  IWETH__factory
 } from "../typechain-types";
-import { Addressable, BigNumberish, TransactionReceipt } from "ethers";
+import { Addressable, BigNumberish, /* TransactionReceipt */ } from "ethers";
 import { expect } from "chai";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { BN } from "bn.js";
+import { IERC20__factory } from "../typechain-types/factories/contracts/AuxContracts/PancakeRouter.sol";
 
-const gasLimit = "5000000";
+//const gasLimit = "5000000";
 //const gasPrice = "5000000000";
 
 /* const ZERO_ADDRESS = `0x0000000000000000000000000000000000000000`;
 const DEAD_ADDRESS = `0x000000000000000000000000000000000000dEaD`; */
 
-let _TemplateToken: TemplateToken;
-let _IDEXRouter: PancakeRouter; //| IDEXRouter;
+const BUY_TEST_ARRAY : string[][] = [
+  ["LINK", '0x514910771AF9Ca656af840dff83E8264EcF986CA'], 
+  ["TETHER", "0xdAC17F958D2ee523a2206206994597C13D831ec7"],
+  ["PEPE", "0x6982508145454Ce325dDbE47a25d4ec3d2311933"]
+];
+
+const WETH = process.env.WETH??"";
+const UNIV3_FACTORY_ETH = process.env.UNIV3_FACTORY_ETH??"";
+const debug = process.env.DEBUG_TEST == "1";
+const debugsolidity = process.env.DEBUG_SOLIDITY == "1";
+
+let _SimpleRouterV3: SimpleRouterV3;
 let accounts: HardhatEthersSigner[];
 let _owner: HardhatEthersSigner;
 
-//Unique way make eth-gas-reporter work fine
-const dexContractName = "PancakeRouter";
-
-const debug = process.env.DEBUG_TEST == "1";
-
-const getAccountBalance = async (account: string) => {
-  const balance = await ethers.provider.getBalance(account);
-  return ethers.formatUnits(balance, "ether");
-};
+// const getAccountBalance = async (account: string) => {
+//   const balance = await ethers.provider.getBalance(account);
+//   return ethers.formatUnits(balance, "ether");
+// };
 
 const BN2 = (x: BigNumberish) => new BN(x.toString());
 const toWei = (value: BigNumberish) => ethers.parseEther(value.toString());
-/* const fromWei = (value: BigNumberish, fixed: number = 2) =>
-  parseFloat(ethers.formatUnits(value, "ether")).toFixed(fixed); */
 
-const getBlockTimestamp = async () => {
-  return (await ethers.provider.getBlock("latest"))?.timestamp;
-};
+// const fromWei = (value: BigNumberish, fixed: number = 2) =>
+//   parseFloat(ethers.formatUnits(value, "ether")).toFixed(fixed);
 
-/* const getBlockNumber = async () => {
-  return (await ethers.provider.getBlock("latest"))?.number;
-}; */
+// const getBlockTimestamp = async () => {
+//   return (await ethers.provider.getBlock("latest"))?.timestamp;
+// };
 
-const increaseDays = async (days: number) => {
-  await increase(86400 * days);
-};
+// const getBlockNumber = async () => {
+//   return (await ethers.provider.getBlock("latest"))?.number;
+// };
 
-const increase = async (duration: number) => {
-  return new Promise((resolve /* reject */) => {
-    network.provider
-      .request({
-        method: "evm_increaseTime",
-        params: [duration],
-      })
-      .finally(() => {
-        network.provider
-          .request({
-            method: "evm_mine",
-            params: [],
-          })
-          .finally(() => {
-            resolve(undefined);
-          });
-      });
-  });
-};
+// const increaseDays = async (days: number) => {
+//   await increase(86400 * days);
+// };
+
+// const increase = async (duration: number) => {
+//   return new Promise((resolve /* reject */) => {
+//     network.provider
+//       .request({
+//         method: "evm_increaseTime",
+//         params: [duration],
+//       })
+//       .finally(() => {
+//         network.provider
+//           .request({
+//             method: "evm_mine",
+//             params: [],
+//           })
+//           .finally(() => {
+//             resolve(undefined);
+//           });
+//       });
+//   });
+// };
 
 const log = (message: string) => {
   if (debug) {
@@ -74,293 +80,187 @@ const log = (message: string) => {
   }
 };
 
-describe("TemplateToken", function () {
+describe("SimpleRouterV3", function () {
   async function deployment() {
-    const templateToken = await ethers.deployContract("TemplateToken", {
+    const simpleRouterV3 = await ethers.deployContract("SimpleRouterV3", [WETH, debugsolidity], {
       //gasPrice: gasPrice,
       gasLimit: "20000000",
     });
-    await templateToken.waitForDeployment();
+    await simpleRouterV3.waitForDeployment();
     log(
-      `TemplateToken successfully deployed: ${
-        templateToken.target
-      } (by: ${await templateToken.owner()})`,
+      `SimpleRouterV3 successfully deployed: ${
+        simpleRouterV3.target
+      } (by: ${await simpleRouterV3.owner()})`,
     );
     // Contracts are deployed using the first signer/account by default
     const _accounts = await ethers.getSigners();
-    return { templateToken, _accounts };
+    return { simpleRouterV3, _accounts };
   }
 
-  async function attachContracts() {
-    if (process.env.ROUTER) {
-      _IDEXRouter = await ethers.getContractAt(
-        dexContractName,
-        process.env.ROUTER,
-      );
-
-      log(`Contracts attached: DEX router`);
-      log(`Addresses: ${_IDEXRouter.target}`);
-      return true;
-    }
-    return false;
-  }
-
-  const buyDEX = async (_eth: BigNumberish, _account: HardhatEthersSigner) => {
-    log(`Buying ${_eth} ether...`);
-    const _IDEXRouter2 = await ethers.getContractAt(
-      dexContractName,
-      _IDEXRouter.target,
-      _account,
-    );
-    const _tx =
-      await _IDEXRouter2.swapExactETHForTokensSupportingFeeOnTransferTokens(
-        0,
-        [await _IDEXRouter.WETH(), _TemplateToken.target],
-        _account,
-        parseInt(((await getBlockTimestamp()) ?? 0).toString()) + 3600,
-        {
-          value: toWei(_eth),
-          //gasPrice: gasPrice,
-          gasLimit: gasLimit,
-        },
-      );
-    log(`Buy performed, ${_eth} ether`);
-    return _tx;
-  };
-
-  const sellDEX = async (
-    _nTokens: BigNumberish,
-    _account: HardhatEthersSigner,
-  ) => {
-    log(`Approving tokens ${_nTokens}`);
-    TemplateToken__factory.connect(
-      _TemplateToken.target.toString(),
-      _account,
-    ).approve(_IDEXRouter.target, _nTokens);
-    log(`Selling... ${_nTokens.toString()} tokens`);
-    const _IDEXRouter2 = await ethers.getContractAt(
-      dexContractName,
-      _IDEXRouter.target,
-      _account,
-    ); //IDEXRouter__factory.connect(_IDEXRouter.target.toString(), _account);
-    const _tx =
-      await _IDEXRouter2.swapExactTokensForETHSupportingFeeOnTransferTokens(
-        _nTokens.toString(),
-        0,
-        [_TemplateToken.target, await _IDEXRouter2.WETH()],
-        _account,
-        parseInt(((await getBlockTimestamp()) ?? 0).toString()) + 3600,
-        {
-          //value: toWei("0.05"),
-          //gasPrice: gasPrice,
-          gasLimit: gasLimit,
-        },
-      );
-    log(`Sell performed: ${_nTokens.toString()} tokens`);
-    return _tx;
-  };
-
-  const getDevSigner = async () =>
-    await ethers.getImpersonatedSigner(await _TemplateToken.owner());
+  // const getDevSigner = async () =>
+  //   await ethers.getImpersonatedSigner(await _SimpleRouterV3.owner());
 
   describe("Deployment", function () {
-    it("We check environment variables config", async function () {
-      log(`Environment ROUTER: ${process.env.ROUTER}`);
-      expect([process.env.ROUTER]).to.satisfy(
-        (s: (string | undefined)[]) =>
-          s.every((_s) => _s != undefined && _s != ""),
-        "Environment variables ROUTER can not be empty or undefined",
-      );
-    });
-
-    it("We attach already existing contracts we have to use", async function () {
-      expect(await attachContracts()).to.be.equals(
-        true,
-        "An error happened attaching already existing contracts",
-      );
-    });
-
     it("We attach contracts that have been deployed", async function () {
       const { ...args } = await deployment();
-      _TemplateToken = args.templateToken;
+      _SimpleRouterV3 = args.simpleRouterV3;
       accounts = args._accounts;
       _owner = accounts[0]; //depends... check
 
-      log(`Contracts deployed: TemplateToken`);
-      log(`Addresses: ${_TemplateToken.target}`);
+      log(`Contracts deployed: SimpleRouterV3`);
+      log(`Addresses: ${_SimpleRouterV3.target}`);
       log(`Deployer address: ${_owner.address}`);
       log(
         `Full list of addresses: \n${accounts
           .map((_a) => `\t\t${_a.address}`)
           .join(",\n")}`,
       );
-      expect(_TemplateToken.target).to.satisfy(
+      expect(_SimpleRouterV3.target).to.satisfy(
         (s: string | Addressable) => s != undefined && s != "",
       );
     });
   });
 
-  describe("Add liquidity and checks", function () {
-    it("We add the liquidity", async function () {
-      const ownerBalBefore = await getAccountBalance(_owner.address);
+  for(const BUY_TEST_DATA of BUY_TEST_ARRAY) {
+    const BUY_TEST_CURRENT = BUY_TEST_DATA[1];
 
-      //Send eth to contract, send token, open trade
-      const ownerBal = await _TemplateToken.balanceOf(
-        await _TemplateToken.owner(),
-      );
-      await _TemplateToken.transfer(
-        _TemplateToken.target.toString(),
-        BN2(ownerBal).mul(BN2(95)).div(BN2(100)).toString(),
-      );
+    describe(`Buys checks [${BUY_TEST_DATA[0]} (${BUY_TEST_DATA[1]})]`, function () {
+      it("Perform buy with ETH, should work", async function () {
+        for(const acc of accounts.slice(2, 4)){    
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(_SimpleRouterV3.target.toString(), acc);
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, WETH, toWei("1"));              
 
-      const contractBalBefore = await _TemplateToken.balanceOf(
-        _TemplateToken.target.toString(),
-      );
-      await _TemplateToken.openTrading({ value: toWei(1) });
-      const contractBalAfter = await _TemplateToken.balanceOf(
-        _TemplateToken.target.toString(),
-      );
+          for(let _i = 0; _i < 2; _i++){
+            let amountOutReal = BN2((await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(acc)));
 
-      const ownerBalAfter = await getAccountBalance(_owner.address);
-      //expect(transactionResponse).not.to.be.reverted;
-      log(
-        `Owner ${_owner.address} bal before: ${ownerBalBefore}, bal after: ${ownerBalAfter}`,
-      );
-      log(
-        `Contract ${_TemplateToken.target.toString()} bal before: ${contractBalBefore}, bal after: ${contractBalAfter}`,
-      );
-      expect(parseInt(ownerBalBefore) - parseInt(ownerBalAfter)).to.be.gte(
-        1,
-        "1 ether was added to liq, so we have to confirm the balance difference",
-      );
-    });
-  });
+            const tx = await __SimpleRouterV3.performBuyTokenETH(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, 0, { value: toWei("1") });
+            const txsr = await tx.wait();
 
-  describe("Transactions checks", function () {
-    it("Owner transaction without fee applied", async function () {
-      const [ownerBeforeBalance, userBeforeBalance] = await Promise.all([
-        BN2(await _TemplateToken.balanceOf(_owner)),
-        BN2(await _TemplateToken.balanceOf(accounts[1])),
-      ]);
-      const sumBefore = ownerBeforeBalance.add(userBeforeBalance).toString();
-      await _TemplateToken.transfer(
-        accounts[1],
-        ownerBeforeBalance.div(BN2(100)).toString(),
-      );
-      const [ownerAfterBalance, userAfterBalance] = await Promise.all([
-        BN2(await _TemplateToken.balanceOf(_owner)),
-        BN2(await _TemplateToken.balanceOf(accounts[1])),
-      ]);
-      const sumAfter = ownerAfterBalance.add(userAfterBalance).toString();
-      expect(sumAfter).to.satisfy(
-        (afterBalance: string) => BN2(afterBalance).eq(BN2(sumBefore)),
-        "Total amount has to be the same than before because no fees are applied",
-      );
-    });
+            amountOutReal = BN2((await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(acc)).toString()).sub(amountOutReal);
 
-    it("User transaction with fee applied", async function () {
-      const [ownerBeforeBalance, userBeforeBalance] = await Promise.all([
-        BN2(await _TemplateToken.balanceOf(accounts[1])),
-        BN2(await _TemplateToken.balanceOf(accounts[2])),
-      ]);
-      const sumBefore = ownerBeforeBalance.add(userBeforeBalance).toString();
-      const _templateToken = TemplateToken__factory.connect(
-        _TemplateToken.target.toString(),
-        accounts[1],
-      );
-      await _templateToken.transfer(
-        accounts[2].address.toLowerCase(),
-        ownerBeforeBalance.div(BN2(100)).toString(),
-      );
-      const [ownerAfterBalance, userAfterBalance] = await Promise.all([
-        BN2(await _TemplateToken.balanceOf(accounts[1])),
-        BN2(await _TemplateToken.balanceOf(accounts[2])),
-      ]);
-      const sumAfter = ownerAfterBalance.add(userAfterBalance).toString();
-      expect(sumAfter).to.satisfy(
-        (afterBalance: string) => BN2(afterBalance).lt(BN2(sumBefore)),
-        "Total amount has to be lower than before because of fees applied",
-      );
-    });
-  });
+            log(`Amount expected ${amountOut}, amount received ${amountOutReal}, acc ${acc.address}`);
+            const checkTx = txsr?.status && txsr.status == 1;
+            const checkMin = amountOutReal.gte(BN2(amountOut).mul(BN2(99)).div(BN2(100)));
+            const checkMax = amountOutReal.mul(BN2(99)).div(BN2(100)).lte(BN2(amountOut));
 
-  describe("Buys checks", function () {
-    it("Perform buys, with all the accounts, should work", async function () {
-      const txs = await Promise.all(
-        accounts.map((_account) => buyDEX("0.01", _account)),
-      );
-      const txsR = await Promise.all(txs.map((_tx) => _tx.wait()));
-      expect(txsR).to.satisfy((_txs: TransactionReceipt[]) =>
-        _txs.every((_tx) => _tx.status == 1),
-      );
-    });
-  });
+            expect(checkTx).to.satisfy((chk:boolean) => chk, `Transaction failed for account ${acc.address}`);
+            expect(checkMin).to.satisfy((chk:boolean) => chk, `Less tokens than expected received for account ${acc.address}`);
+            expect(checkMax).to.satisfy((chk:boolean) => chk, `More tokens than expected received for account ${acc.address}`);
+          }
+        }
+      });    
 
-  describe("Sells checks", function () {
-    it("Perform sell should work", async function () {
-      const tokensSellBefore = await _TemplateToken.balanceOf(accounts[1]);
-      await sellDEX(BN2(tokensSellBefore).div(BN2(10)).toString(), accounts[1]);
-      const tokensSellAfter = await _TemplateToken.balanceOf(accounts[1]);
-      expect(BN2(tokensSellBefore).sub(BN2(tokensSellAfter))).to.be.gte(
-        BN2(tokensSellBefore).div(BN2(10)),
-      ); //.not.to.be.reverted("Transaction should not revert")
+      it("Perform buy with token (WETH), should work", async function () {
+        for(const acc of accounts.slice(2, 4)){    
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(_SimpleRouterV3.target.toString(), acc);
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, WETH, toWei("1"));              
+
+          for(let _i = 0; _i < 2; _i++){
+            await IWETH__factory.connect(WETH, acc).deposit({value: toWei("1")});
+            await IERC20__factory.connect(WETH, acc).approve(__SimpleRouterV3.target.toString(), toWei("1"));
+
+            let amountOutReal = BN2((await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(acc)));
+
+            const tx = await __SimpleRouterV3.performBuyToken(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, WETH, toWei("1"), 0);
+            const txsr = await tx.wait();
+
+            amountOutReal = BN2((await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(acc)).toString()).sub(amountOutReal);
+
+            log(`Amount expected ${amountOut}, amount received ${amountOutReal}, acc ${acc.address}`);
+            const checkTx = txsr?.status && txsr.status == 1;
+            const checkMin = amountOutReal.gte(BN2(amountOut).mul(BN2(99)).div(BN2(100)));
+            const checkMax = amountOutReal.mul(BN2(99)).div(BN2(100)).lte(BN2(amountOut));
+
+            expect(checkTx).to.satisfy((chk:boolean) => chk, `(TOKEN) Transaction failed for account ${acc.address}`);
+            expect(checkMin).to.satisfy((chk:boolean) => chk, `(TOKEN) Less tokens than expected received for account ${acc.address}`);
+            expect(checkMax).to.satisfy((chk:boolean) => chk, `(TOKEN) More tokens than expected received for account ${acc.address}`);
+          }
+        }
+      });
     });
 
-    it("Increase time 1 day", async function () {
-      const blockTimestampBefore = await getBlockTimestamp();
-      await increaseDays(1);
-      const blockTimestampAfter = await getBlockTimestamp();
-      const _diff = (blockTimestampAfter ?? 0) - (blockTimestampBefore ?? 0);
-      log(
-        `Block timestamp before-after: ${blockTimestampBefore}-${blockTimestampAfter} (${_diff})`,
-      );
-      expect(_diff).to.be.gte(3600 * 24);
+    describe(`Buys checks with slip [${BUY_TEST_DATA[0]} (${BUY_TEST_DATA[1]})]`, function (){
+      it("Perform buy with ETH and slip 99, should work", async function () {
+        for(const acc of accounts.slice(2, 4)){    
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(_SimpleRouterV3.target.toString(), acc);
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, WETH, toWei("1"));              
+
+          for(let _i = 0; _i < 2; _i++){
+            let amountOutReal = BN2((await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(acc)));
+
+            const amountMin = BN2(amountOut).mul(BN2(99)).div(BN2(100)).toString();
+            const tx = await __SimpleRouterV3.performBuyTokenETH(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, amountMin, { value: toWei("1") });
+            const txsr = await tx.wait();
+
+            amountOutReal = BN2((await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(acc)).toString()).sub(amountOutReal);
+
+            log(`Amount expected ${amountOut}, amount received ${amountOutReal}, acc ${acc.address}`);
+            const checkTx = txsr?.status && txsr.status == 1;
+            const checkMin = amountOutReal.gte(BN2(amountOut).mul(BN2(99)).div(BN2(100)));
+            const checkMax = amountOutReal.mul(BN2(99)).div(BN2(100)).lte(BN2(amountOut));
+
+            expect(checkTx).to.satisfy((chk:boolean) => chk, `Transaction failed for account ${acc.address}`);
+            expect(checkMin).to.satisfy((chk:boolean) => chk, `Less tokens than expected received for account ${acc.address}`);
+            expect(checkMax).to.satisfy((chk:boolean) => chk, `More tokens than expected received for account ${acc.address}`);
+          }
+        }
+      });    
+
+      it("Perform buy with ETH and slip 101, should NOT work", async function () {
+        for(const acc of accounts.slice(2, 4)){    
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(_SimpleRouterV3.target.toString(), acc);
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, WETH, toWei("1"));              
+
+          for(let _i = 0; _i < 2; _i++){
+            const amountMin = BN2(amountOut).mul(BN2(101)).div(BN2(100)).toString()
+            await expect(__SimpleRouterV3.performBuyTokenETH(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, amountMin, { value: toWei("1") })).to.be.revertedWith("Slippage error");
+          }
+        }
+      });  
+
+      it("Perform buy with token (WETH) and slip 99, should work", async function () {
+        for(const acc of accounts.slice(2, 4)){    
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(_SimpleRouterV3.target.toString(), acc);
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, WETH, toWei("1"));              
+
+          for(let _i = 0; _i < 2; _i++){
+            await IWETH__factory.connect(WETH, acc).deposit({value: toWei("1")});
+            await IERC20__factory.connect(WETH, acc).approve(__SimpleRouterV3.target.toString(), toWei("1"));
+
+            let amountOutReal = BN2((await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(acc)));
+
+            const amountMin = BN2(amountOut).mul(BN2(99)).div(BN2(100)).toString();
+            const tx = await __SimpleRouterV3.performBuyToken(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, WETH, toWei("1"), amountMin);
+            const txsr = await tx.wait();
+
+            amountOutReal = BN2((await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(acc)).toString()).sub(amountOutReal);
+
+            log(`Amount expected ${amountOut}, amount received ${amountOutReal}, acc ${acc.address}`);
+            const checkTx = txsr?.status && txsr.status == 1;
+            const checkMin = amountOutReal.gte(BN2(amountOut).mul(BN2(99)).div(BN2(100)));
+            const checkMax = amountOutReal.mul(BN2(99)).div(BN2(100)).lte(BN2(amountOut));
+
+            expect(checkTx).to.satisfy((chk:boolean) => chk, `(TOKEN) Transaction failed for account ${acc.address}`);
+            expect(checkMin).to.satisfy((chk:boolean) => chk, `(TOKEN) Less tokens than expected received for account ${acc.address}`);
+            expect(checkMax).to.satisfy((chk:boolean) => chk, `(TOKEN) More tokens than expected received for account ${acc.address}`);
+          }
+        }
+      });
+
+      it("Perform buy with token (WETH) and slip 101, should NOT work", async function () {
+        for(const acc of accounts.slice(2, 4)){    
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(_SimpleRouterV3.target.toString(), acc);
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, WETH, toWei("1"));              
+
+          for(let _i = 0; _i < 2; _i++){
+            await IWETH__factory.connect(WETH, acc).deposit({value: toWei("1")});
+            await IERC20__factory.connect(WETH, acc).approve(__SimpleRouterV3.target.toString(), toWei("1"));
+
+            const amountMin = BN2(amountOut).mul(BN2(101)).div(BN2(100)).toString();
+            await expect(__SimpleRouterV3.performBuyToken(UNIV3_FACTORY_ETH, BUY_TEST_CURRENT, WETH, toWei("1"), amountMin)).to.be.revertedWith("Slippage error");
+          }
+        }
+      });
     });
-
-    it("Perform sell should work", async function () {
-      const tokensSellBefore = await _TemplateToken.balanceOf(accounts[1]);
-      await sellDEX(BN2(tokensSellBefore).div(BN2(10)).toString(), accounts[1]);
-      const tokensSellAfter = await _TemplateToken.balanceOf(accounts[1]);
-      expect(BN2(tokensSellBefore).sub(BN2(tokensSellAfter))).to.be.gte(
-        BN2(tokensSellBefore).div(BN2(10)),
-      );
-    });
-  });
-
-  describe("Auxiliary functions", function () {
-    it("Force swapback", async function () {
-      const txs = await TemplateToken__factory.connect(
-        _TemplateToken.target.toString(),
-        await getDevSigner(),
-      ).manualSwap({ gasLimit: gasLimit });
-      const txsR = await txs.wait();
-      expect(txsR).to.satisfy((_tx: TransactionReceipt) => _tx.status == 1); //expect().not.to.be.reverted;
-    });
-
-    it("Clear stuck", async function () {
-      const _tt = await TemplateToken__factory.connect(
-        _TemplateToken.target.toString(),
-        await getDevSigner(),
-      );
-
-      const buyTax = parseInt((await _tt._buyTax()).toString());
-      const sellTax = parseInt((await _tt._sellTax()).toString());
-
-      await TemplateToken__factory.connect(
-        _TemplateToken.target.toString(),
-        await getDevSigner(),
-      ).reduceFee(2);
-
-      const buyTax2 = parseInt((await _tt._buyTax()).toString());
-      const sellTax2 = parseInt((await _tt._sellTax()).toString());
-
-      expect([
-        [buyTax, sellTax],
-        [buyTax2, sellTax2],
-      ]).to.satisfy(
-        (taxes: number[][]) =>
-          taxes[0][0] == taxes[1][0] + 2 && taxes[0][1] == taxes[1][1] + 2,
-      );
-    });
-  });
+  }
 });

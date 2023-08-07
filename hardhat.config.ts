@@ -58,33 +58,46 @@ const config: HardhatUserConfig = {
         },
       },
       {
+        version: "0.5.0",
+        settings: {
+          //evmVersion: "byzantium",
+          evmVersion: "istanbul",
+          optimizer: {
+            enabled: true,
+            runs: 999,
+          },
+        },
+      },
+      {
         version: "0.7.6",
         settings: {
           //evmVersion: "byzantium",
           evmVersion: "istanbul",
           optimizer: {
             enabled: true,
-            runs: 800,
+            runs: 999,
           },
         },
       },
     ],
   },
-  mocha: {},
+  mocha: {
+    timeout: 100000000
+  },
   etherscan: {
     //https://hardhat.org/hardhat-runner/plugins/nomicfoundation-hardhat-verify
     apiKey: {
       bsc: "your binance smart chain API KEY",
       //npx hardhat verify --list-networks //available networks
       //https://hardhat.org/hardhat-runner/plugins/nomicfoundation-hardhat-verify#adding-support-for-other-networks // if you need other networks
-      xdai: "1ZEBZGNXCXC5F73K2Z2JA5TS2K7424ZAQQ",
+      xdai: "",
     },
   },
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
       forking: {
-        url: "https://base-mainnet.public.blastapi.io", //"https://mainnet.base.org",//"https://base-mainnet.public.blastapi.io",//"https://eth.llamarpc.com",
+        url: "https://eth.llamarpc.com", //"https://mainnet.base.org",//"https://base-mainnet.public.blastapi.io",//"https://eth.llamarpc.com",
         enabled: true,
       },
       hardfork: "istanbul",
@@ -95,23 +108,23 @@ const config: HardhatUserConfig = {
       throwOnCallFailures: true,
       blockGasLimit: 30000000,
     },
-    bscMainnet: {
-      url: "https://bsc-dataseed1.binance.org/",
-      accounts: privateKey ? [`0x${privateKey}`] : [],
-      gasPrice: 5000000000,
-    },
-    gnosis: {
-      url: "https://rpc.gnosischain.com",
-      accounts: [],
-      chainId: 100,
-    },
+    // bscMainnet: {
+    //   url: "https://bsc-dataseed1.binance.org/",
+    //   accounts: privateKey ? [`0x${privateKey}`] : [],
+    //   gasPrice: 5000000000,
+    // },
+    // gnosis: {
+    //   url: "https://rpc.gnosischain.com",
+    //   accounts: [],
+    //   chainId: 100,
+    // },
   },
   gasReporter: {
     enabled: true,
 
     token: "ETH",
     gasPriceApi:
-      "https://api.basescan.org/api?module=proxy&action=eth_gasPrice",
+      "https://api.etherscan.io/api?module=proxy&action=eth_gasPrice",
 
     // if we want the report in a file
     outputFile: "gasReporterOutput.json",

@@ -3,7 +3,7 @@ import {
   SimpleRouterV3,
   SimpleRouterV3__factory,
   IWETH__factory,
-  IERC20__factory
+  IERC20__factory,
 } from "../typechain-types";
 import { Addressable, BigNumberish /* TransactionReceipt */ } from "ethers";
 import { expect } from "chai";

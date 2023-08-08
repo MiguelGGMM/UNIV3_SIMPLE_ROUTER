@@ -7,6 +7,7 @@ pragma solidity ^0.8.12;
 
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -52,7 +53,7 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
     uint160 internal constant MAX_SQRT_RATIO = 1461446703485210103287273052203988822378723970342;
 
     // Decimals price precision
-    uint8 internal constant decimalsPrecision = 18;
+    //uint8 internal constant decimalsPrecision = 9;
 
     // Pair fees
     uint24 internal constant liqPairFee001 = 100;
@@ -78,6 +79,14 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
     }
 
     // region VIEWS
+
+    function min(uint256 el1, uint256 el2) internal pure returns(uint256){
+        return el1 > el2 ? el2 : el1;
+    }
+
+    function max(uint256 el1, uint256 el2) internal pure returns(uint256){
+        return el1 > el2 ? el1 : el2;
+    }
 
     function improveLiqPair(
         address factory,
@@ -156,13 +165,29 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
         (, int24 tick, , , , , ) = IUniswapV3Pool(liqPair).slot0();
         uint160 sqrtRatioAtTick = TickMath.getSqrtRatioAtTick(tick);
         uint256 ratioAtTick = uint256(sqrtRatioAtTick).mul(uint256(sqrtRatioAtTick));
-        bool _zeroForOne = weth == IUniswapV3Pool(liqPair).token0();
+        bool _zeroForOne = pair == IUniswapV3Pool(liqPair).token0();
 
-        if (!_zeroForOne) {
-            return amountIn.mul(10 ** decimalsPrecision).div(ratioAtTick.mul(10 ** decimalsPrecision).div(2 ** 192));
-        } else {
-            return amountIn.mul(ratioAtTick.mul(10 ** decimalsPrecision).div(2 ** 192)).div(10 ** decimalsPrecision);
+        // PRECISION
+        uint256 _decimals = 6;
+        (bool valid,) = ratioAtTick.tryMul(10 ** _decimals);
+        if(!valid) {
+            _decimals = 0;
         }
+
+        uint256 precision = (2 ** 192 > ratioAtTick ? uint256(2 ** 192).mul(10 ** _decimals).div(ratioAtTick) : ratioAtTick.mul(10 ** _decimals).div(uint256(2 ** 192)));
+        (valid,) = precision.tryMul(ratioAtTick);
+        if(!valid) {
+            precision = 10 ** 6;
+        }
+
+        uint256 amountNoDecs = 0;
+        if (!_zeroForOne) {
+            amountNoDecs = amountIn.mul(precision).div(ratioAtTick.mul(precision).div(2 ** 192));            
+        } else {
+            amountNoDecs = amountIn.mul(ratioAtTick.mul(precision).div(2 ** 192)).div(precision);
+        }
+
+        return amountNoDecs;
     }
 
     // endregion
@@ -268,6 +293,79 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
             require(success, "Transfer error (payment) (notEthOP)");
         }
     }
+
+    // region HONEY CHECK (using static calls)
+
+    function performBuyAndSellTokenETH(
+        address factory,
+        address tokenBuy
+    ) external payable nonReentrant returns(uint256, uint256) {
+        //// CHECK BUY
+        setBasicVariables(factory, tokenBuy, weth, msg.value, 0);
+
+        uint256 estimatedOutput = this.calcAmountReceived(factory, tokenBuy, weth, msg.value);
+
+        // WRAP ETH
+        IWETH wethI = IWETH(zeroForOne ? currentLiqPool.token0() : currentLiqPool.token1());
+        wethI.deposit{value: currentTokensPair}();
+
+        // SWAP
+        performSwap();
+
+        uint256 realOutput = IERC20(currentToken).balanceOf(recipient).sub(currentLastTokens);
+        uint256 buyTax = uint256(10000).sub(realOutput.mul(10000).div(estimatedOutput));
+
+        //// CHECK SELL
+        setBasicVariables(factory, weth, tokenBuy, realOutput, 0);
+        isEthOp = false; // Needed to perform the transferFrom on callback
+
+        estimatedOutput = this.calcAmountReceived(factory, weth, tokenBuy, realOutput);
+
+        if(debugMode) {
+            console.log("Input amount %s, output amount %s", msg.value, estimatedOutput);
+        }
+
+        // SWAP
+        performSwap();
+
+        realOutput = IERC20(weth).balanceOf(recipient).sub(currentLastTokens);
+        uint256 sellTax = uint256(10000).sub(realOutput.mul(10000).div(estimatedOutput));
+
+        return (buyTax, sellTax);
+    }
+
+    function performBuyAndSellToken(
+        address factory,
+        address tokenBuy,
+        address pair,
+        uint256 amountPair
+    ) external nonReentrant returns(uint256, uint256) {
+        //// CHECK BUY
+        setBasicVariables(factory, tokenBuy, pair, amountPair, 0);
+
+        uint256 estimatedOutput = this.calcAmountReceived(factory, tokenBuy, pair, amountPair);
+
+        // SWAP
+        performSwap();
+
+        uint256 realOutput = IERC20(currentToken).balanceOf(recipient).sub(currentLastTokens);
+        uint256 buyTax = uint256(10000).sub(realOutput.mul(10000).div(estimatedOutput));
+
+        //// CHECK SELL
+        setBasicVariables(factory, pair, tokenBuy, realOutput, 0);
+
+        estimatedOutput = this.calcAmountReceived(factory, pair, tokenBuy, realOutput);
+
+        // SWAP
+        performSwap();
+
+        realOutput = IERC20(pair).balanceOf(recipient).sub(currentLastTokens);
+        uint256 sellTax = uint256(10000).sub(realOutput.mul(10000).div(estimatedOutput));
+
+        return (buyTax, sellTax);
+    }
+
+    // endregion
 
     // region ADMIN
 

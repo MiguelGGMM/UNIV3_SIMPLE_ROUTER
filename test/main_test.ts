@@ -497,13 +497,16 @@ describe("SimpleRouterV3", function () {
             WETH,
             toWei("1"),
           );
-          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            BN2(amountOut).mul(BN2(1000)).toString(),
+          );
 
           for (let _i = 0; _i < 2; _i++) {
             await IERC20__factory.connect(WETH, acc).approve(
               __SimpleRouterV3.target.toString(),
               toWei("100"),
-            );    
+            );
             let amountOutReal = BN2(
               await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
                 acc,
@@ -568,7 +571,10 @@ describe("SimpleRouterV3", function () {
             WETH,
             toWei("1"),
           );
-          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            BN2(amountOut).mul(BN2(1000)).toString(),
+          );
 
           for (let _i = 0; _i < 2; _i++) {
             await IWETH__factory.connect(WETH, acc).deposit({
@@ -577,7 +583,7 @@ describe("SimpleRouterV3", function () {
             await IERC20__factory.connect(WETH, acc).approve(
               __SimpleRouterV3.target.toString(),
               toWei("100"),
-            );    
+            );
 
             let amountOutReal = BN2(
               await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
@@ -592,7 +598,7 @@ describe("SimpleRouterV3", function () {
               toWei("1"),
               0,
               100,
-              100
+              100,
             );
             const txsr = await tx.wait();
 
@@ -648,13 +654,16 @@ describe("SimpleRouterV3", function () {
             WETH,
             toWei("1"),
           );
-          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            BN2(amountOut).mul(BN2(1000)).toString(),
+          );
 
           for (let _i = 0; _i < 2; _i++) {
             await IERC20__factory.connect(WETH, acc).approve(
               __SimpleRouterV3.target.toString(),
               toWei("100"),
-            );    
+            );
             let amountOutReal = BN2(
               await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
                 acc,
@@ -723,13 +732,16 @@ describe("SimpleRouterV3", function () {
             WETH,
             toWei("1"),
           );
-          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            BN2(amountOut).mul(BN2(1000)).toString(),
+          );
 
           for (let _i = 0; _i < 2; _i++) {
             await IERC20__factory.connect(WETH, acc).approve(
               __SimpleRouterV3.target.toString(),
               toWei("100"),
-            );    
+            );
             const amountMin = BN2(amountOut)
               .mul(BN2(101))
               .div(BN2(100))
@@ -760,16 +772,19 @@ describe("SimpleRouterV3", function () {
             WETH,
             toWei("1"),
           );
-          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            BN2(amountOut).mul(BN2(1000)).toString(),
+          );
 
-          for (let _i = 0; _i < 2; _i++) { 
+          for (let _i = 0; _i < 2; _i++) {
             await IWETH__factory.connect(WETH, acc).deposit({
               value: toWei("1"),
             });
             await IERC20__factory.connect(WETH, acc).approve(
               __SimpleRouterV3.target.toString(),
               toWei("100"),
-            );    
+            );
 
             let amountOutReal = BN2(
               await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
@@ -788,7 +803,7 @@ describe("SimpleRouterV3", function () {
               toWei("1"),
               amountMin,
               100,
-              100
+              100,
             );
             const txsr = await tx.wait();
 
@@ -840,7 +855,10 @@ describe("SimpleRouterV3", function () {
             WETH,
             toWei("1"),
           );
-          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            BN2(amountOut).mul(BN2(1000)).toString(),
+          );
 
           for (let _i = 0; _i < 2; _i++) {
             await IWETH__factory.connect(WETH, acc).deposit({
@@ -849,7 +867,7 @@ describe("SimpleRouterV3", function () {
             await IERC20__factory.connect(WETH, acc).approve(
               __SimpleRouterV3.target.toString(),
               toWei("100"),
-            );    
+            );
 
             const amountMin = BN2(amountOut)
               .mul(BN2(101))
@@ -863,7 +881,7 @@ describe("SimpleRouterV3", function () {
                 toWei("1"),
                 amountMin,
                 100,
-                100
+                100,
               ),
             ).to.be.revertedWith("Slippage error");
           }
@@ -885,14 +903,17 @@ describe("SimpleRouterV3", function () {
             BUY_TEST_CURRENT,
             WETH,
             toWei("1"),
-          );          
-          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            BN2(amountOut).mul(BN2(1000)).toString(),
+          );
 
           for (let _i = 0; _i < 2; _i++) {
             await IERC20__factory.connect(WETH, acc).approve(
               __SimpleRouterV3.target.toString(),
               toWei("100"),
-            );            
+            );
 
             let amountOutReal = BN2(
               await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
@@ -902,14 +923,17 @@ describe("SimpleRouterV3", function () {
 
             const accBal = await getAccountBalance(acc.address);
             /*eslint-disable-next-line*/
-            const taxes: any = await __SimpleRouterV3.performBuyAndSellTokenETH.staticCallResult(
-              UNIV3_FACTORY_ETH,
-              BUY_TEST_CURRENT,
-              { value: toWei("1") },
-            );
-            const accBal2 = await getAccountBalance(acc.address);            
+            const taxes: any =
+              await __SimpleRouterV3.performBuyAndSellTokenETH.staticCallResult(
+                UNIV3_FACTORY_ETH,
+                BUY_TEST_CURRENT,
+                { value: toWei("1") },
+              );
+            const accBal2 = await getAccountBalance(acc.address);
 
-            log(`${BUY_TEST_CURRENT} taxes: ${taxes} (${taxes[0]}, ${taxes[1]})`);
+            log(
+              `${BUY_TEST_CURRENT} taxes: ${taxes} (${taxes[0]}, ${taxes[1]})`,
+            );
             amountOutReal = BN2(
               (
                 await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
@@ -917,12 +941,12 @@ describe("SimpleRouterV3", function () {
                 )
               ).toString(),
             ).sub(amountOutReal);
-          
+
             const check = amountOutReal.eq(BN2(0));
             const checkBal = accBal2 == accBal;
             const checkBuyTax = BN2(taxes[0].toString()).lte(BN2(100));
             const checkSellTax = BN2(taxes[1].toString()).lte(BN2(100));
-            
+
             expect(check).to.satisfy(
               (chk: boolean) => chk,
               `Not expected to receive tokens from static call for account ${acc.address}`,
@@ -955,7 +979,10 @@ describe("SimpleRouterV3", function () {
             WETH,
             toWei("1"),
           );
-          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            BN2(amountOut).mul(BN2(1000)).toString(),
+          );
 
           for (let _i = 0; _i < 2; _i++) {
             await IWETH__factory.connect(WETH, acc).deposit({
@@ -974,15 +1001,18 @@ describe("SimpleRouterV3", function () {
 
             const accBal = await getAccountBalance(acc.address);
             /*eslint-disable-next-line*/
-            const taxes:any = await __SimpleRouterV3.performBuyAndSellToken.staticCallResult(
-              UNIV3_FACTORY_ETH,
-              BUY_TEST_CURRENT,
-              WETH,
-              toWei("1")
-            );
+            const taxes: any =
+              await __SimpleRouterV3.performBuyAndSellToken.staticCallResult(
+                UNIV3_FACTORY_ETH,
+                BUY_TEST_CURRENT,
+                WETH,
+                toWei("1"),
+              );
             const accBal2 = await getAccountBalance(acc.address);
 
-            log(`${BUY_TEST_CURRENT} taxes: ${taxes} (${taxes[0]}, ${taxes[1]})`);
+            log(
+              `${BUY_TEST_CURRENT} taxes: ${taxes} (${taxes[0]}, ${taxes[1]})`,
+            );
             amountOutReal = BN2(
               (
                 await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(

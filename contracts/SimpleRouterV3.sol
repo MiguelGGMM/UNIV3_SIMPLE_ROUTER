@@ -68,9 +68,9 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
     uint24[] internal liqPairFeeX;
 
     // Amount for tax check
-    uint256 constant internal amountForCheck = 10;
-    uint256 constant internal baseForCheck = 10000;
-    uint256 constant internal amountForBuying = baseForCheck - amountForCheck;
+    uint256 internal constant amountForCheck = 10;
+    uint256 internal constant baseForCheck = 10000;
+    uint256 internal constant amountForBuying = baseForCheck - amountForCheck;
 
     bool private reentrantCallback;
     modifier nonReentrantCallback() {
@@ -88,19 +88,19 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
 
     // region INTERNAL VIEWS
 
-    function min(uint256 el1, uint256 el2) internal pure returns(uint256){
+    function min(uint256 el1, uint256 el2) internal pure returns (uint256) {
         return el1 > el2 ? el2 : el1;
     }
 
-    function max(uint256 el1, uint256 el2) internal pure returns(uint256){
+    function max(uint256 el1, uint256 el2) internal pure returns (uint256) {
         return el1 > el2 ? el1 : el2;
     }
 
-    /**     
-    *@notice Try find the most liquid pair for the token0 and token1 specified, if not liq pair is found then previous liq pair address will be returned 
-    *@dev On arguments it receives previous liq pair address (lastLiqPair) and his liq available (lastLiqBal)
-    *@return The pair address and the liq amount available
-    */
+    /**
+     *@notice Try find the most liquid pair for the token0 and token1 specified, if not liq pair is found then previous liq pair address will be returned
+     *@dev On arguments it receives previous liq pair address (lastLiqPair) and his liq available (lastLiqBal)
+     *@return The pair address and the liq amount available
+     */
     function improveLiqPair(
         address factory,
         address token0,
@@ -121,10 +121,10 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
         }
     }
 
-    /**     
-    *@notice Try find the most liquid pair for the token0 and token1 specified, if not liq pair is found then ZERO address will be returned 
-    *@return The pair address and the liq amount available
-    */
+    /**
+     *@notice Try find the most liquid pair for the token0 and token1 specified, if not liq pair is found then ZERO address will be returned
+     *@return The pair address and the liq amount available
+     */
     function searchLiqPairBase(
         address factory,
         address token0,
@@ -147,15 +147,7 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
         // Check for other pools
         if (liqPairFeeX.length > 0) {
             for (uint24 _i = 0; _i < liqPairFeeX.length; _i++) {
-                (liqPair, liqBal) = improveLiqPair(
-                    factory,
-                    token0,
-                    token1,
-                    pairZero,
-                    liqPairFeeX[_i],
-                    liqPair,
-                    liqBal
-                );
+                (liqPair, liqBal) = improveLiqPair(factory, token0, token1, pairZero, liqPairFeeX[_i], liqPair, liqBal);
             }
         }
 
@@ -166,10 +158,10 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
 
     // region VIEWS
 
-    /**     
-    *@notice Try find the most liquid pair for the tokens specified, if not liq pair is found then ZERO address will be returned 
-    *@return The pair address and the liq amount available
-    */
+    /**
+     *@notice Try find the most liquid pair for the tokens specified, if not liq pair is found then ZERO address will be returned
+     *@return The pair address and the liq amount available
+     */
     function searchLiqPair(address factory, address token, address pair) external view returns (address) {
         (address liqPair, uint256 liqBal) = searchLiqPairBase(factory, token, pair, false);
         (address liqPair2, uint256 liqBal2) = searchLiqPairBase(factory, pair, token, true);
@@ -177,9 +169,9 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
     }
 
     /**
-    *@notice Calculates the estimated output amount (token) on a trade pair -> token
-    *@return The estimated token amount you would receive
-    */
+     *@notice Calculates the estimated output amount (token) on a trade pair -> token
+     *@return The estimated token amount you would receive
+     */
     function calcAmountReceived(
         address factory,
         address token,
@@ -198,29 +190,33 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
 
         // PRICE PRECISION
         uint256 _decimals = 6;
-        (bool valid,) = ratioAtTick.tryMul(10 ** _decimals);
-        if(!valid) {
-            while(!valid && _decimals > 0) {
+        (bool valid, ) = ratioAtTick.tryMul(10 ** _decimals);
+        if (!valid) {
+            while (!valid && _decimals > 0) {
                 _decimals--;
-                (valid,) = ratioAtTick.tryMul(10 ** _decimals);
+                (valid, ) = ratioAtTick.tryMul(10 ** _decimals);
             }
         }
         require(valid, "INVALID PRECISSION DECIMALS");
-        uint256 precision = (2 ** 192 > ratioAtTick ? uint256(2 ** 192).mul(10 ** _decimals).div(ratioAtTick) : ratioAtTick.mul(10 ** _decimals).div(uint256(2 ** 192)));
-        (valid,) = precision.tryMul(ratioAtTick);
-        if(!valid) {
+        uint256 precision = (
+            2 ** 192 > ratioAtTick
+                ? uint256(2 ** 192).mul(10 ** _decimals).div(ratioAtTick)
+                : ratioAtTick.mul(10 ** _decimals).div(uint256(2 ** 192))
+        );
+        (valid, ) = precision.tryMul(ratioAtTick);
+        if (!valid) {
             precision = 10 ** 6;
-            (valid,) = precision.tryMul(ratioAtTick);
-            while(!valid && precision >= 10) {
+            (valid, ) = precision.tryMul(ratioAtTick);
+            while (!valid && precision >= 10) {
                 precision = precision.div(10);
-                (valid,) = precision.tryMul(ratioAtTick);
+                (valid, ) = precision.tryMul(ratioAtTick);
             }
         }
         require(valid, "INVALID PRECISSION VALUE");
 
         uint256 amountOutput = 0;
         if (!_zeroForOne) {
-            amountOutput = amountIn.mul(precision).div(ratioAtTick.mul(precision).div(2 ** 192));            
+            amountOutput = amountIn.mul(precision).div(ratioAtTick.mul(precision).div(2 ** 192));
         } else {
             amountOutput = amountIn.mul(ratioAtTick.mul(precision).div(2 ** 192)).div(precision);
         }
@@ -239,7 +235,7 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
         uint256 amountPair,
         uint256 minTokensReceived,
         address _recipient,
-        bool _isEthOp                
+        bool _isEthOp
     ) internal {
         recipient = _recipient;
         currentToken = tokenBuy;
@@ -283,7 +279,7 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
     ) internal {
         setBasicVariables(factory, tokenBuy, pair, amountPair, minTokensReceived, _recipient, amountETH > 0);
 
-        if(amountETH > 0) {
+        if (amountETH > 0) {
             // WRAP ETH
             IWETH wethI = IWETH(zeroForOne ? currentLiqPool.token0() : currentLiqPool.token1());
             wethI.deposit{value: currentTokensPair}();
@@ -298,9 +294,9 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
         address tokenBuy,
         address pair,
         uint256 amountPair,
-        uint256 amountETH      
-    ) internal returns(uint256, uint256) {
-        if(amountETH > 0) {
+        uint256 amountETH
+    ) internal returns (uint256, uint256) {
+        if (amountETH > 0) {
             amountPair = amountETH;
             pair = weth;
         }
@@ -308,7 +304,7 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
         //// CHECK BUY
         uint256 estimatedOutput = this.calcAmountReceived(factory, tokenBuy, pair, amountPair);
         performBuyTokenInternal(factory, tokenBuy, pair, amountPair, amountETH, msg.sender, 0);
-        uint256 realOutput = IERC20(currentToken).balanceOf(recipient).sub(currentLastTokens);        
+        uint256 realOutput = IERC20(currentToken).balanceOf(recipient).sub(currentLastTokens);
 
         //// CHECK SELL
         uint256 estimatedOutputSell = this.calcAmountReceived(factory, pair, tokenBuy, realOutput);
@@ -359,13 +355,27 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
         uint256 maxTaxBuy,
         uint256 maxTaxSell
     ) external payable nonReentrant {
-        (uint256 taxBuy, uint256 taxSell) = performBuyAndSellTokenInternal(factory, tokenBuy, weth /* will be overriden */, 0 /* will be overriden */, msg.value.mul(amountForCheck).div(baseForCheck));
-        if(debugMode){
+        (uint256 taxBuy, uint256 taxSell) = performBuyAndSellTokenInternal(
+            factory,
+            tokenBuy,
+            weth /* will be overriden */,
+            0 /* will be overriden */,
+            msg.value.mul(amountForCheck).div(baseForCheck)
+        );
+        if (debugMode) {
             console.log("Buy tax: %s, Sell tax: %s", taxBuy, taxSell);
         }
         require(taxBuy <= maxTaxBuy, "Buy tax too high");
         require(taxSell <= maxTaxSell, "Sell tax too high");
-        performBuyTokenInternal(factory, tokenBuy, weth, msg.value.mul(amountForBuying).div(baseForCheck), msg.value.mul(amountForBuying).div(baseForCheck), msg.sender, minTokensReceived.mul(amountForBuying).div(baseForCheck));
+        performBuyTokenInternal(
+            factory,
+            tokenBuy,
+            weth,
+            msg.value.mul(amountForBuying).div(baseForCheck),
+            msg.value.mul(amountForBuying).div(baseForCheck),
+            msg.sender,
+            minTokensReceived.mul(amountForBuying).div(baseForCheck)
+        );
     }
 
     /// @notice Buy token using another token (pair) after previous tax checking
@@ -381,13 +391,27 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
         uint256 maxTaxBuy,
         uint256 maxTaxSell
     ) external payable nonReentrant {
-        (uint256 taxBuy, uint256 taxSell) = performBuyAndSellTokenInternal(factory, tokenBuy, pair, amountPair.mul(amountForCheck).div(baseForCheck), 0);
-        if(debugMode){
+        (uint256 taxBuy, uint256 taxSell) = performBuyAndSellTokenInternal(
+            factory,
+            tokenBuy,
+            pair,
+            amountPair.mul(amountForCheck).div(baseForCheck),
+            0
+        );
+        if (debugMode) {
             console.log("Buy tax: %s, Sell tax: %s", taxBuy, taxSell);
         }
         require(taxBuy <= maxTaxBuy, "Buy tax too high");
         require(taxSell <= maxTaxSell, "Sell tax too high");
-        performBuyTokenInternal(factory, tokenBuy, pair, amountPair.mul(amountForBuying).div(baseForCheck), 0, msg.sender, minTokensReceived.mul(amountForBuying).div(baseForCheck));
+        performBuyTokenInternal(
+            factory,
+            tokenBuy,
+            pair,
+            amountPair.mul(amountForBuying).div(baseForCheck),
+            0,
+            msg.sender,
+            minTokensReceived.mul(amountForBuying).div(baseForCheck)
+        );
     }
 
     /// @notice This function is called by the UniswapV3 liquidity pools, here we check if the required tokens were received and in that case the payment is sent
@@ -421,7 +445,7 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
             if (debugMode) console.log("Transfer success? %s", success);
             require(success, "Transfer error (payment) (notEthOP)");
         }
-    }    
+    }
 
     // endregion
 
@@ -432,8 +456,15 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
     function performBuyAndSellTokenETH(
         address factory,
         address tokenBuy
-    ) external nonReentrant payable returns(uint256, uint256) {
-        return performBuyAndSellTokenInternal(factory, tokenBuy, weth /* will be overriden */, 0 /* will be overriden */, msg.value);
+    ) external payable nonReentrant returns (uint256, uint256) {
+        return
+            performBuyAndSellTokenInternal(
+                factory,
+                tokenBuy,
+                weth /* will be overriden */,
+                0 /* will be overriden */,
+                msg.value
+            );
     }
 
     /// @notice Buy and sell the specified token using another token (pair) and returns the buy and sell taxes
@@ -443,7 +474,7 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
         address tokenBuy,
         address pair,
         uint256 amountPair
-    ) external nonReentrant returns(uint256, uint256) {
+    ) external nonReentrant returns (uint256, uint256) {
         return performBuyAndSellTokenInternal(factory, tokenBuy, pair, amountPair, 0);
     }
 

@@ -484,6 +484,395 @@ describe("SimpleRouterV3", function () {
       });
     });
 
+    describe(`Buys checks with tax check [${BUY_TEST_DATA[0]} (${BUY_TEST_DATA[1]})]`, function () {
+      it("Perform buy with ETH, should work", async function () {
+        for (const acc of accounts.slice(2, 4)) {
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(
+            _SimpleRouterV3.target.toString(),
+            acc,
+          );
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(
+            UNIV3_FACTORY_ETH,
+            BUY_TEST_CURRENT,
+            WETH,
+            toWei("1"),
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+
+          for (let _i = 0; _i < 2; _i++) {
+            await IERC20__factory.connect(WETH, acc).approve(
+              __SimpleRouterV3.target.toString(),
+              toWei("100"),
+            );    
+            let amountOutReal = BN2(
+              await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
+                acc,
+              ),
+            );
+
+            const tx = await __SimpleRouterV3.performBuyTokenETHWithCheck(
+              UNIV3_FACTORY_ETH,
+              BUY_TEST_CURRENT,
+              0,
+              100,
+              100,
+              { value: toWei("1") },
+            );
+            const txsr = await tx.wait();
+
+            amountOutReal = BN2(
+              (
+                await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
+                  acc,
+                )
+              ).toString(),
+            ).sub(amountOutReal);
+
+            log(
+              `Amount expected ${amountOut}, amount received ${amountOutReal}, acc ${acc.address}`,
+            );
+            const checkTx = txsr?.status && txsr.status == 1;
+            const checkMin = amountOutReal.gte(
+              BN2(amountOut).mul(BN2(99)).div(BN2(100)),
+            );
+            const checkMax = amountOutReal
+              .mul(BN2(99))
+              .div(BN2(100))
+              .lte(BN2(amountOut));
+
+            expect(checkTx).to.satisfy(
+              (chk: boolean) => chk,
+              `Transaction failed for account ${acc.address}`,
+            );
+            expect(checkMin).to.satisfy(
+              (chk: boolean) => chk,
+              `Less tokens than expected received for account ${acc.address}`,
+            );
+            expect(checkMax).to.satisfy(
+              (chk: boolean) => chk,
+              `More tokens than expected received for account ${acc.address}`,
+            );
+          }
+        }
+      });
+
+      it("Perform buy with token (WETH), should work", async function () {
+        for (const acc of accounts.slice(2, 4)) {
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(
+            _SimpleRouterV3.target.toString(),
+            acc,
+          );
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(
+            UNIV3_FACTORY_ETH,
+            BUY_TEST_CURRENT,
+            WETH,
+            toWei("1"),
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+
+          for (let _i = 0; _i < 2; _i++) {
+            await IWETH__factory.connect(WETH, acc).deposit({
+              value: toWei("1"),
+            });
+            await IERC20__factory.connect(WETH, acc).approve(
+              __SimpleRouterV3.target.toString(),
+              toWei("100"),
+            );    
+
+            let amountOutReal = BN2(
+              await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
+                acc,
+              ),
+            );
+
+            const tx = await __SimpleRouterV3.performBuyTokenWithCheck(
+              UNIV3_FACTORY_ETH,
+              BUY_TEST_CURRENT,
+              WETH,
+              toWei("1"),
+              0,
+              100,
+              100
+            );
+            const txsr = await tx.wait();
+
+            amountOutReal = BN2(
+              (
+                await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
+                  acc,
+                )
+              ).toString(),
+            ).sub(amountOutReal);
+
+            log(
+              `Amount expected ${amountOut}, amount received ${amountOutReal}, acc ${acc.address}`,
+            );
+            const checkTx = txsr?.status && txsr.status == 1;
+            const checkMin = amountOutReal.gte(
+              BN2(amountOut).mul(BN2(99)).div(BN2(100)),
+            );
+            const checkMax = amountOutReal
+              .mul(BN2(99))
+              .div(BN2(100))
+              .lte(BN2(amountOut));
+
+            expect(checkTx).to.satisfy(
+              (chk: boolean) => chk,
+              `(TOKEN) Transaction failed for account ${acc.address}`,
+            );
+            expect(checkMin).to.satisfy(
+              (chk: boolean) => chk,
+              `(TOKEN) Less tokens than expected received for account ${acc.address}`,
+            );
+            expect(checkMax).to.satisfy(
+              (chk: boolean) => chk,
+              `(TOKEN) More tokens than expected received for account ${acc.address}`,
+            );
+          }
+        }
+      });
+
+      //2 more for should NOT work
+    });
+
+    describe(`Buys checks with slip and tax check [${BUY_TEST_DATA[0]} (${BUY_TEST_DATA[1]})]`, function () {
+      it("Perform buy with ETH and slip 99, should work", async function () {
+        for (const acc of accounts.slice(2, 4)) {
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(
+            _SimpleRouterV3.target.toString(),
+            acc,
+          );
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(
+            UNIV3_FACTORY_ETH,
+            BUY_TEST_CURRENT,
+            WETH,
+            toWei("1"),
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+
+          for (let _i = 0; _i < 2; _i++) {
+            await IERC20__factory.connect(WETH, acc).approve(
+              __SimpleRouterV3.target.toString(),
+              toWei("100"),
+            );    
+            let amountOutReal = BN2(
+              await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
+                acc,
+              ),
+            );
+
+            const amountMin = BN2(amountOut)
+              .mul(BN2(99))
+              .div(BN2(100))
+              .toString();
+            const tx = await __SimpleRouterV3.performBuyTokenETHWithCheck(
+              UNIV3_FACTORY_ETH,
+              BUY_TEST_CURRENT,
+              amountMin,
+              100,
+              100,
+              { value: toWei("1") },
+            );
+            const txsr = await tx.wait();
+
+            amountOutReal = BN2(
+              (
+                await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
+                  acc,
+                )
+              ).toString(),
+            ).sub(amountOutReal);
+
+            log(
+              `Amount expected ${amountOut}, amount received ${amountOutReal}, acc ${acc.address}`,
+            );
+            const checkTx = txsr?.status && txsr.status == 1;
+            const checkMin = amountOutReal.gte(
+              BN2(amountOut).mul(BN2(99)).div(BN2(100)),
+            );
+            const checkMax = amountOutReal
+              .mul(BN2(99))
+              .div(BN2(100))
+              .lte(BN2(amountOut));
+
+            expect(checkTx).to.satisfy(
+              (chk: boolean) => chk,
+              `Transaction failed for account ${acc.address}`,
+            );
+            expect(checkMin).to.satisfy(
+              (chk: boolean) => chk,
+              `Less tokens than expected received for account ${acc.address}`,
+            );
+            expect(checkMax).to.satisfy(
+              (chk: boolean) => chk,
+              `More tokens than expected received for account ${acc.address}`,
+            );
+          }
+        }
+      });
+
+      it("Perform buy with ETH and slip 101, should NOT work", async function () {
+        for (const acc of accounts.slice(2, 4)) {
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(
+            _SimpleRouterV3.target.toString(),
+            acc,
+          );
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(
+            UNIV3_FACTORY_ETH,
+            BUY_TEST_CURRENT,
+            WETH,
+            toWei("1"),
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+
+          for (let _i = 0; _i < 2; _i++) {
+            await IERC20__factory.connect(WETH, acc).approve(
+              __SimpleRouterV3.target.toString(),
+              toWei("100"),
+            );    
+            const amountMin = BN2(amountOut)
+              .mul(BN2(101))
+              .div(BN2(100))
+              .toString();
+            await expect(
+              __SimpleRouterV3.performBuyTokenETHWithCheck(
+                UNIV3_FACTORY_ETH,
+                BUY_TEST_CURRENT,
+                amountMin,
+                100,
+                100,
+                { value: toWei("1") },
+              ),
+            ).to.be.revertedWith("Slippage error");
+          }
+        }
+      });
+
+      it("Perform buy with token (WETH) and slip 99, should work", async function () {
+        for (const acc of accounts.slice(2, 4)) {
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(
+            _SimpleRouterV3.target.toString(),
+            acc,
+          );
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(
+            UNIV3_FACTORY_ETH,
+            BUY_TEST_CURRENT,
+            WETH,
+            toWei("1"),
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+
+          for (let _i = 0; _i < 2; _i++) { 
+            await IWETH__factory.connect(WETH, acc).deposit({
+              value: toWei("1"),
+            });
+            await IERC20__factory.connect(WETH, acc).approve(
+              __SimpleRouterV3.target.toString(),
+              toWei("100"),
+            );    
+
+            let amountOutReal = BN2(
+              await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
+                acc,
+              ),
+            );
+
+            const amountMin = BN2(amountOut)
+              .mul(BN2(99))
+              .div(BN2(100))
+              .toString();
+            const tx = await __SimpleRouterV3.performBuyTokenWithCheck(
+              UNIV3_FACTORY_ETH,
+              BUY_TEST_CURRENT,
+              WETH,
+              toWei("1"),
+              amountMin,
+              100,
+              100
+            );
+            const txsr = await tx.wait();
+
+            amountOutReal = BN2(
+              (
+                await IERC20__factory.connect(BUY_TEST_CURRENT, acc).balanceOf(
+                  acc,
+                )
+              ).toString(),
+            ).sub(amountOutReal);
+
+            log(
+              `Amount expected ${amountOut}, amount received ${amountOutReal}, acc ${acc.address}`,
+            );
+            const checkTx = txsr?.status && txsr.status == 1;
+            const checkMin = amountOutReal.gte(
+              BN2(amountOut).mul(BN2(99)).div(BN2(100)),
+            );
+            const checkMax = amountOutReal
+              .mul(BN2(99))
+              .div(BN2(100))
+              .lte(BN2(amountOut));
+
+            expect(checkTx).to.satisfy(
+              (chk: boolean) => chk,
+              `(TOKEN) Transaction failed for account ${acc.address}`,
+            );
+            expect(checkMin).to.satisfy(
+              (chk: boolean) => chk,
+              `(TOKEN) Less tokens than expected received for account ${acc.address}`,
+            );
+            expect(checkMax).to.satisfy(
+              (chk: boolean) => chk,
+              `(TOKEN) More tokens than expected received for account ${acc.address}`,
+            );
+          }
+        }
+      });
+
+      it("Perform buy with token (WETH) and slip 101, should NOT work", async function () {
+        for (const acc of accounts.slice(2, 4)) {
+          const __SimpleRouterV3 = SimpleRouterV3__factory.connect(
+            _SimpleRouterV3.target.toString(),
+            acc,
+          );
+          const amountOut = await __SimpleRouterV3.calcAmountReceived(
+            UNIV3_FACTORY_ETH,
+            BUY_TEST_CURRENT,
+            WETH,
+            toWei("1"),
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(_SimpleRouterV3.target.toString(), BN2(amountOut).mul(BN2(1000)).toString());
+
+          for (let _i = 0; _i < 2; _i++) {
+            await IWETH__factory.connect(WETH, acc).deposit({
+              value: toWei("1"),
+            });
+            await IERC20__factory.connect(WETH, acc).approve(
+              __SimpleRouterV3.target.toString(),
+              toWei("100"),
+            );    
+
+            const amountMin = BN2(amountOut)
+              .mul(BN2(101))
+              .div(BN2(100))
+              .toString();
+            await expect(
+              __SimpleRouterV3.performBuyTokenWithCheck(
+                UNIV3_FACTORY_ETH,
+                BUY_TEST_CURRENT,
+                WETH,
+                toWei("1"),
+                amountMin,
+                100,
+                100
+              ),
+            ).to.be.revertedWith("Slippage error");
+          }
+        }
+      });
+
+      //4 more for should NOT
+    });
+
     describe(`Honey checks [${BUY_TEST_DATA[0]} (${BUY_TEST_DATA[1]})]`, function () {
       it("Perform buy with ETH, should work", async function () {
         for (const acc of accounts.slice(2, 4)) {

@@ -230,7 +230,7 @@ jobs:
       # codechecks, gas report diff
       - name: Codechecks gas report
         run: |
-          pnpm run codechecks
+          pnpm run codechecks -x
         env:
           CC_SECRET: ${{ secrets.CC_SECRET }}
       # codechecks

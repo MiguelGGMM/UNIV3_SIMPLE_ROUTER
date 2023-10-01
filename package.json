@@ -40,7 +40,7 @@
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",
     "@nomicfoundation/hardhat-verify": "^1.0.4",
     "@nomiclabs/hardhat-solhint": "^3.0.1",
-    "@openzeppelin/contracts": "^4.9.2",
+    "@openzeppelin/contracts": "^4.9.3",
     "@typechain/ethers-v6": "^0.4.2",
     "@typechain/hardhat": "^8.0.2",
     "@types/bn.js": "^5.1.1",

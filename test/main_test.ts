@@ -18,7 +18,7 @@ const DEAD_ADDRESS = `0x000000000000000000000000000000000000dEaD`; */
 
 const BUY_TEST_ARRAY: string[][] = [
   ["LINK", "0x514910771AF9Ca656af840dff83E8264EcF986CA"],
-  //["TETHER", "0xdAC17F958D2ee523a2206206994597C13D831ec7"],
+  ["TETHER", "0xdAC17F958D2ee523a2206206994597C13D831ec7"],
   ["USDC", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"],
   ["PEPE", "0x6982508145454Ce325dDbE47a25d4ec3d2311933"],
 ];
@@ -499,6 +499,10 @@ describe("SimpleRouterV3", function () {
           );
           await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
             _SimpleRouterV3.target.toString(),
+            0,
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
             BN2(amountOut).mul(BN2(1000)).toString(),
           );
 
@@ -570,6 +574,10 @@ describe("SimpleRouterV3", function () {
             BUY_TEST_CURRENT,
             WETH,
             toWei("1"),
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            0,
           );
           await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
             _SimpleRouterV3.target.toString(),
@@ -656,6 +664,10 @@ describe("SimpleRouterV3", function () {
           );
           await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
             _SimpleRouterV3.target.toString(),
+            0,
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
             BN2(amountOut).mul(BN2(1000)).toString(),
           );
 
@@ -734,6 +746,10 @@ describe("SimpleRouterV3", function () {
           );
           await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
             _SimpleRouterV3.target.toString(),
+            0,
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
             BN2(amountOut).mul(BN2(1000)).toString(),
           );
 
@@ -771,6 +787,10 @@ describe("SimpleRouterV3", function () {
             BUY_TEST_CURRENT,
             WETH,
             toWei("1"),
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            0,
           );
           await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
             _SimpleRouterV3.target.toString(),
@@ -857,6 +877,10 @@ describe("SimpleRouterV3", function () {
           );
           await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
             _SimpleRouterV3.target.toString(),
+            0,
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
             BN2(amountOut).mul(BN2(1000)).toString(),
           );
 
@@ -903,6 +927,10 @@ describe("SimpleRouterV3", function () {
             BUY_TEST_CURRENT,
             WETH,
             toWei("1"),
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            0,
           );
           await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
             _SimpleRouterV3.target.toString(),
@@ -978,6 +1006,10 @@ describe("SimpleRouterV3", function () {
             BUY_TEST_CURRENT,
             WETH,
             toWei("1"),
+          );
+          await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
+            _SimpleRouterV3.target.toString(),
+            0,
           );
           await IERC20__factory.connect(BUY_TEST_CURRENT, acc).approve(
             _SimpleRouterV3.target.toString(),

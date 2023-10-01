@@ -10,7 +10,6 @@ pragma solidity ^0.8.12;
 
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -18,6 +17,7 @@ import {IWETH} from "./Libraries/IWETH.sol";
 import {IUniswapV3Pool} from "./UniswapV3/IUniswapV3Pool.sol";
 import {IUniswapV3Factory} from "./UniswapV3/IUniswapV3Factory.sol";
 import {TickMath} from "./Libraries/TickMath.sol";
+import {TransferHelper} from "./UniswapV2/TransferHelper.sol";
 import {console} from "hardhat/console.sol";
 
 /// @author <TG: @campermon>
@@ -437,13 +437,11 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
 
         // Send payment
         if (isEthOp) {
-            bool success = IERC20(currentPair).transfer(address(currentLiqPool), currentTokensPair);
-            if (debugMode) console.log("Transfer success? %s", success);
-            require(success, "Transfer error (payment) (ethOP)");
+            TransferHelper.safeTransfer(currentPair, address(currentLiqPool), currentTokensPair);
+            if (debugMode) console.log("Transfer success? %s", true);
         } else {
-            bool success = IERC20(currentPair).transferFrom(recipient, address(currentLiqPool), currentTokensPair);
-            if (debugMode) console.log("Transfer success? %s", success);
-            require(success, "Transfer error (payment) (notEthOP)");
+            TransferHelper.safeTransferFrom(currentPair, recipient, address(currentLiqPool), currentTokensPair);
+            if (debugMode) console.log("Transfer success? %s", true);
         }
     }
 
@@ -490,11 +488,12 @@ contract SimpleRouterV3 is Context, Ownable2Step, ReentrancyGuard {
         if (_tokens == 0) {
             _tokens = IERC20(_tokenAddress).balanceOf(address(this));
         }
-        return IERC20(_tokenAddress).transfer(msg.sender, _tokens);
+        TransferHelper.safeTransfer(_tokenAddress, msg.sender, _tokens);
+        return true;
     }
 
     function clearStuckBalance() external onlyOwner {
-        payable(msg.sender).transfer(address(this).balance);
+        TransferHelper.safeTransferETH(msg.sender, address(this).balance);
     }
 
     //endregion

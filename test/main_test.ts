@@ -960,7 +960,7 @@ describe("SimpleRouterV3", function () {
             const accBal2 = await getAccountBalance(acc.address);
 
             log(
-              `${BUY_TEST_CURRENT} taxes: ${taxes} (${taxes[0]}, ${taxes[1]})`,
+              `${BUY_TEST_CURRENT} taxes (over 10000): ${taxes} (${taxes[0]}, ${taxes[1]})`,
             );
             amountOutReal = BN2(
               (
@@ -1043,7 +1043,7 @@ describe("SimpleRouterV3", function () {
             const accBal2 = await getAccountBalance(acc.address);
 
             log(
-              `${BUY_TEST_CURRENT} taxes: ${taxes} (${taxes[0]}, ${taxes[1]})`,
+              `${BUY_TEST_CURRENT} taxes (over 10000): ${taxes} (${taxes[0]}, ${taxes[1]})`,
             );
             amountOutReal = BN2(
               (
